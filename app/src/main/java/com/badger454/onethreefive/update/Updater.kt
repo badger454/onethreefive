@@ -1,23 +1,17 @@
 package com.badger454.onethreefive.update
 
-import android.app.PendingIntent
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageInstaller
 import android.net.Uri
-import android.os.Build
-import android.provider.Settings
 import android.util.Log
 import com.badger454.onethreefive.BuildConfig
 import com.badger454.onethreefive.domain.Json
-import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Updates from this app's GitHub Releases: check the latest release, download its APK,
- * and hand it to Android's installer (which always asks you to confirm).
+ * Updates from this app's GitHub Releases: check the latest release and open its APK in the browser.
+ * The app itself never installs anything (no install permission), which keeps Play Protect happy.
  */
 object Updater {
     private const val LATEST = "https://api.github.com/repos/badger454/onethreefive/releases/latest"
@@ -68,86 +62,8 @@ object Updater {
         }
     }
 
-    fun canInstall(ctx: Context): Boolean = ctx.packageManager.canRequestPackageInstalls()
-
-    fun openInstallPermission(ctx: Context) {
-        ctx.startActivity(
-            Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + ctx.packageName))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        )
-    }
-
-    /** Downloads the APK (following GitHub's redirect) into the cache. Network call; run off the main thread. */
-    fun download(ctx: Context, rel: Release, progress: (Float) -> Unit): File {
-        var url = URL(rel.apkUrl)
-        var conn: HttpURLConnection
-        var hops = 0
-        while (true) {
-            conn = url.openConnection() as HttpURLConnection
-            conn.instanceFollowRedirects = false
-            conn.connectTimeout = 20000
-            conn.readTimeout = 30000
-            conn.setRequestProperty("User-Agent", "onethreefive-android")
-            val code = conn.responseCode
-            if (code in 300..399 && hops < 5) {
-                val loc = conn.getHeaderField("Location") ?: throw IllegalStateException("Redirect without location")
-                url = URL(url, loc)
-                hops++
-                conn.disconnect()
-                continue
-            }
-            if (code != 200) throw IllegalStateException("Download failed ($code)")
-            break
-        }
-        val total = conn.contentLengthLong.takeIf { it > 0 } ?: rel.apkSize
-        val out = File(ctx.cacheDir, "update.apk")
-        conn.inputStream.use { input ->
-            out.outputStream().use { o ->
-                val buf = ByteArray(64 * 1024)
-                var done = 0L
-                while (true) {
-                    val n = input.read(buf)
-                    if (n < 0) break
-                    o.write(buf, 0, n)
-                    done += n
-                    if (total > 0) progress((done.toFloat() / total).coerceIn(0f, 1f))
-                }
-            }
-        }
-        return out
-    }
-
-    /** Hands the APK to Android's package installer. Android then shows its own "Update this app?" screen. */
-    fun install(ctx: Context, apk: File) {
-        val installer = ctx.packageManager.packageInstaller
-        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
-        if (Build.VERSION.SDK_INT >= 31) params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_REQUIRED)
-        val id = installer.createSession(params)
-        installer.openSession(id).use { session ->
-            apk.inputStream().use { input ->
-                session.openWrite("update", 0, apk.length()).use { out ->
-                    input.copyTo(out)
-                    session.fsync(out)
-                }
-            }
-            val status = Intent(ctx, InstallReceiver::class.java).setAction(ACTION_INSTALL_STATUS)
-            val pi = PendingIntent.getBroadcast(ctx, id, status, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
-            session.commit(pi.intentSender)
-        }
-    }
-}
-
-/** Receives the installer's status; when it needs the user's OK, opens Android's confirmation screen. */
-class InstallReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        when (intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
-            PackageInstaller.STATUS_PENDING_USER_ACTION -> {
-                @Suppress("DEPRECATION")
-                val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT) ?: return
-                context.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
-            PackageInstaller.STATUS_SUCCESS -> {}
-            else -> Log.w("Updater", "install failed: " + intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE))
-        }
+    /** Opens the APK link in the browser; Chrome downloads it and Android's installer takes over from there. */
+    fun openDownload(ctx: Context, rel: Release) {
+        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(rel.apkUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }

@@ -2,8 +2,12 @@
 
 Newest first. Each build publishes the top entry as its release notes, and the app shows it under "What's new" when you check for updates.
 
+## Oct 27, 2026 · Simpler updates
+- Check for updates now opens the new version's download in your browser; tap the finished download to install.
+- The app no longer asks for permission to install apps, which is what made Play Protect flag 1.0.7.
+
 ## Oct 27, 2026 · Updates from Settings
-- Settings → Updates → Check for updates: shows what's new, downloads the new version and opens Android's installer.
+- Settings → Updates → Check for updates: shows what's new and links to the new version.
 - Example tasks are now generic.
 
 ## Oct 27, 2026 · Typing fix

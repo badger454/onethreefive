@@ -493,7 +493,6 @@ private fun UpdateSection(model: AppModel) {
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
     var found by remember { mutableStateOf<com.badger454.onethreefive.update.Updater.Release?>(null) }
-    var progress by remember { mutableStateOf<Float?>(null) }
     Text("You have version ${BuildConfig.VERSION_NAME}.", fontSize = 14.sp, color = p.muted)
     if (status != null) Text(status!!, fontSize = 14.sp, color = p.ink, modifier = Modifier.padding(top = 4.dp))
     Spacer(Modifier.height(8.dp))
@@ -513,46 +512,22 @@ private fun UpdateSection(model: AppModel) {
     val rel = found
     if (rel != null) {
         AlertDialog(
-            onDismissRequest = { if (progress == null) found = null },
+            onDismissRequest = { found = null },
             containerColor = p.surface,
             title = { Text("Version ${rel.version} is available", fontWeight = FontWeight.Bold, color = p.ink) },
             text = {
                 Column(Modifier.heightIn(max = 360.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
                     Text("What's new", fontWeight = FontWeight.Bold, color = p.ink, fontSize = 14.sp)
                     Text(rel.notes.ifBlank { "No notes for this version." }, color = p.muted, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
-                    val pr = progress
-                    if (pr != null) {
-                        androidx.compose.material3.LinearProgressIndicator(
-                            progress = { pr }, modifier = Modifier.fillMaxWidth().padding(top = 14.dp), color = p.accent, trackColor = p.line,
-                        )
-                        Text("Downloading…", color = p.muted, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-                    }
                 }
             },
-            dismissButton = { TextButton(onClick = { found = null; progress = null }, enabled = progress == null) { Text("Later") } },
+            dismissButton = { TextButton(onClick = { found = null }) { Text("Later") } },
             confirmButton = {
-                TextButton(enabled = progress == null, onClick = {
-                    if (!com.badger454.onethreefive.update.Updater.canInstall(ctx)) {
-                        model.say("Allow \u201cInstall unknown apps\u201d for 1-3-5, then come back and tap Install again.")
-                        com.badger454.onethreefive.update.Updater.openInstallPermission(ctx)
-                        return@TextButton
-                    }
-                    progress = 0f
-                    scope.launch {
-                        try {
-                            val file = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                com.badger454.onethreefive.update.Updater.download(ctx, rel) { f -> progress = f }
-                            }
-                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.badger454.onethreefive.update.Updater.install(ctx, file) }
-                            found = null
-                        } catch (e: Exception) {
-                            status = "The download didn't finish. Try again."
-                            found = null
-                        } finally {
-                            progress = null
-                        }
-                    }
-                }) { Text("Install") }
+                TextButton(onClick = {
+                    com.badger454.onethreefive.update.Updater.openDownload(ctx, rel)
+                    found = null
+                    model.say("When the download finishes, tap it to install. Your tasks are kept.")
+                }) { Text("Download") }
             },
         )
     }
