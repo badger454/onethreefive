@@ -65,7 +65,7 @@ fun BucketScreen(model: AppModel) {
     val planner = model.planner
     val l = planner.bucketList()
     val drag = remember { DragState() }
-    drag.onDrop = { id, at ->
+    drag.onDrop = { id, at, _ ->
         val cy = at.y
         planner.find(id)?.let { t ->
             val items = planner.bucketList().filter { it.id != id }
@@ -123,7 +123,7 @@ fun ProjectsScreen(model: AppModel) {
     val archived = planner.state.projects.filter { it.archived }
     val open = planner.state.tasks.count { t -> t.proj != null && !t.done && active.any { it.id == t.proj } }
     val drag = remember { DragState() }
-    drag.onDrop = { id, at ->
+    drag.onDrop = { id, at, _ ->
         val cy = at.y
         planner.find(id)?.let { t ->
             val pid = t.proj

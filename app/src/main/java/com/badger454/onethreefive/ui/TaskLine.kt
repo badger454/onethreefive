@@ -56,6 +56,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -87,10 +88,16 @@ class DragState {
     val lists = HashMap<String, Rect>()
     /** Extra drop targets (e.g. "bucket", "project") by bounds in root. */
     val zones = HashMap<String, Rect>()
-    var onDrop: (taskId: String, at: Offset) -> Unit = { _, _ -> }
+    var onDrop: (taskId: String, at: Offset, zone: String?) -> Unit = { _, _, _ -> }
+
+    /** Where the finger first touched the handle, in root coordinates. */
+    var finger0: Offset = Offset.Zero
 
     fun center(): Offset = Offset(start.center.x + dx, start.center.y + dy)
-    fun hoverZone(): String? = if (id == null) null else center().let { c -> zones.entries.firstOrNull { it.value.contains(c) }?.key }
+    fun finger(): Offset = Offset(finger0.x + dx, finger0.y + dy)
+    /** Drop targets follow the finger, not the row's middle (rows are full width). */
+    fun zoneAt(p: Offset): String? = zones.entries.firstOrNull { it.value.contains(p) }?.key
+    fun hoverZone(): String? = if (id == null) null else zoneAt(finger())
 }
 
 /**
@@ -246,13 +253,15 @@ fun TaskLine(
         // drag handle
         val canDrag = task != null && drag != null && ctx != RowCtx.PAST
         val dragId = task?.id ?: ""
+        var gripOrigin by remember { mutableStateOf(Offset.Zero) }
         Box(
-            Modifier.width(26.dp).height(40.dp).let { m ->
+            Modifier.width(26.dp).height(40.dp).onGloballyPositioned { gripOrigin = it.positionInRoot() }.let { m ->
                 val d = drag
                 if (canDrag && d != null) m.pointerInput(dragId) {
                     detectDragGestures(
-                        onDragStart = {
+                        onDragStart = { touch ->
                             focusManager.clearFocus()
+                            d.finger0 = gripOrigin + touch
                             d.start = d.rows[dragId] ?: Rect.Zero
                             d.dx = 0f
                             d.dy = 0f
@@ -261,10 +270,11 @@ fun TaskLine(
                         onDragEnd = {
                             val id = d.id
                             val at = d.center()
+                            val zone = d.zoneAt(d.finger())
                             d.id = null
                             d.dx = 0f
                             d.dy = 0f
-                            if (id != null) d.onDrop(id, at)
+                            if (id != null) d.onDrop(id, at, zone)
                         },
                         onDragCancel = { d.id = null; d.dx = 0f; d.dy = 0f },
                         onDrag = { change, amount -> change.consume(); d.dx += amount.x; d.dy += amount.y },

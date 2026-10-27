@@ -104,7 +104,7 @@ fun DayScreen(model: AppModel) {
     }
     val shown = dateOf(pager.currentPage)
     val drag = remember { DragState() }
-    drag.onDrop = { id, at -> dropOnDay(model, drag, id, at) }
+    drag.onDrop = { id, at, zone -> dropOnDay(model, drag, id, at, zone) }
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             DayHeader(model, shown)
@@ -118,10 +118,10 @@ fun DayScreen(model: AppModel) {
     }
 }
 
-private fun dropOnDay(model: AppModel, drag: DragState, id: String, at: Offset) {
+private fun dropOnDay(model: AppModel, drag: DragState, id: String, at: Offset, zone: String?) {
     val planner = model.planner
     val t = planner.find(id) ?: return
-    when (drag.zones.entries.firstOrNull { it.value.contains(at) }?.key) {
+    when (zone) {
         "bucket" -> {
             model.change(undoable = true) { moveToBucket(t) }
             model.say("Moved to the bucket", undo = true)

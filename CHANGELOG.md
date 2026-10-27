@@ -2,6 +2,9 @@
 
 Newest first. Each build publishes the top entry as its release notes, and the app shows it under "What's new" when you check for updates.
 
+## Oct 27, 2026 · Drop targets follow your finger
+- Bucket and Project light up when your finger is over them, not when the middle of the dragged row is.
+
 ## Oct 27, 2026 · Cleaner header
 - Removed the progress bar and "n of n done" from the header.
 
