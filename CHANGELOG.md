@@ -1,0 +1,20 @@
+# Changelog
+
+Newest first. Each build publishes the top entry as its release notes, and the app shows it under "What's new" when you check for updates.
+
+## Oct 27, 2026 · Updates from Settings
+- Settings → Updates → Check for updates: shows what's new, downloads the new version and opens Android's installer.
+- Example tasks are now generic.
+
+## Oct 27, 2026 · Typing fix
+- Typing into an empty line no longer loses the text after the first letter (Day, Bucket and Projects).
+
+## Oct 26, 2026 · New day header and gestures
+- Header shows the month and a Mon–Sun week strip; tap a day to open it, swipe the strip for other weeks.
+- Drag the header down to unroll the month calendar; it follows your finger.
+- Swiping between days follows your finger and settles on the next day.
+- Day rows are one line so a full day fits on screen; tap the text to edit, the arrow to see long text.
+- While dragging a task, drop it on Bucket or Project at the bottom of the screen.
+
+## Oct 26, 2026 · First Android version
+- The 1-3-5 planner from the HTML prototype as a native app: Day, Bucket, Projects, Settings, repeating tasks, reminders, categories, themes, backup and restore.

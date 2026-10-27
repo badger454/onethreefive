@@ -1,0 +1,84 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "ONETHREEFIVE_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No KEYSTORE_BASE64 secret; the APK is signed with a throwaway debug key and won't install over a previous build."
+          fi
+
+      - name: Unit tests
+        run: ./gradlew --no-daemon testDebugUnitTest 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
+
+      - name: Build release APK
+        env:
+          ONETHREEFIVE_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: ./gradlew --no-daemon assembleRelease 2>&1 | tee -a build.log; exit ${PIPESTATUS[0]}
+
+      - name: Rename APK
+        run: |
+          VERSION="1.0.${{ github.run_number }}"
+          cp app/build/outputs/apk/release/app-release.apk "OneThreeFive-$VERSION.apk"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OneThreeFive-${{ env.VERSION }}
+          path: OneThreeFive-*.apk
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Release notes = the newest entry in CHANGELOG.md (its bullets, without the heading).
+          awk '/^## /{n++; next} n==1' CHANGELOG.md | sed '/^[[:space:]]*$/d' > notes.md
+          [ -s notes.md ] || git log -1 --pretty=%s > notes.md
+          gh release create "v$VERSION" "OneThreeFive-$VERSION.apk" \
+            --title "1-3-5 To-Do $VERSION" \
+            --notes-file notes.md \
+            --latest
+
+      - name: Summarize errors
+        if: failure()
+        run: |
+          touch build.log
+          grep -E "^e: |error:|What went wrong|FAILED|Exception|expected:|at com\.badger454" build.log | sed "s|file:///home/runner/work/onethreefive/onethreefive/app/src/main/java/com/badger454/onethreefive/||" | sort -u | head -120 > errors.txt || true
+          for f in app/build/test-results/testDebugUnitTest/*.xml; do [ -f "$f" ] && grep -A3 "<failure" "$f" | head -20 >> errors.txt; done
+          echo "::error title=Build errors::$(sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g' errors.txt)"
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: app/build/reports/
