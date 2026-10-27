@@ -266,24 +266,6 @@ private fun DayHeader(model: AppModel, shown: String) {
             }
         }
         WeekStrip(model, shown)
-        // progress: one segment per planned task
-        var tot = 0
-        var done = 0
-        for (s in Section.entries) for (t in planner.dayList(shown, s)) { tot++; if (t.done) done++ }
-        Row(
-            Modifier.fillMaxWidth().height(14.dp).padding(horizontal = 18.dp).semantics { contentDescription = "$done of $tot done" },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (tot > 0) {
-                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    for (i in 0 until tot) {
-                        Box(Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(3.dp)).background(if (i < done) p.segOn else p.hdrSub.copy(alpha = 0.35f)))
-                    }
-                }
-                Spacer(Modifier.width(10.dp))
-                Text("$done of $tot done", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = p.hdrSub)
-            }
-        }
         Box(Modifier.fillMaxWidth().height(with(density) { calH.value.toDp() }).clipToBounds()) {
             MonthGrid(
                 model, y, m, shown,

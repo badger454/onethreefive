@@ -2,6 +2,9 @@
 
 Newest first. Each build publishes the top entry as its release notes, and the app shows it under "What's new" when you check for updates.
 
+## Oct 27, 2026 · Cleaner header
+- Removed the progress bar and "n of n done" from the header.
+
 ## Oct 27, 2026 · Simpler updates
 - Check for updates now opens the new version's download in your browser; tap the finished download to install.
 - The app no longer asks for permission to install apps, which is what made Play Protect flag 1.0.7.
