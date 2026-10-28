@@ -164,6 +164,12 @@ fun TaskLine(
         if (target != null && target != slotKey) model.focusKey = target else focusManager.clearFocus()
     }
 
+    // The task this blank line just created. Keystrokes can arrive before the screen redraws with the new
+    // task, so later letters must edit that task instead of trying to create another one.
+    var createdId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(task?.id) { if (task != null) createdId = null }
+    fun current(): Task? = task ?: createdId?.let { planner.find(it) }
+
     fun onChange(v: TextFieldValue) {
         var nv = v
         var enter = false
@@ -173,30 +179,33 @@ fun TaskLine(
             nv = TextFieldValue(clean, TextRange(minOf(v.selection.start, clean.length)))
         }
         if (nv.text.length > 500) nv = TextFieldValue(nv.text.take(500), TextRange(500))
-        if (task == null) {
+        val t = current()
+        if (t == null) {
             if (nv.text.isBlank()) { tfv = nv; return }
             val created = onCreate(nv.text)
             if (created == null) { tfv = TextFieldValue(""); return }
+            createdId = created.id
             tfv = nv
             model.commit()
             if (enter) goNext(justCreated = true)
             return
         }
         tfv = nv
-        if (task.title != nv.text) {
-            task.title = nv.text
+        if (t.title != nv.text) {
+            t.title = nv.text
             model.saveQuietly()
         }
-        if (enter && nv.text.isNotBlank()) goNext(justCreated = false)
+        if (enter && nv.text.isNotBlank()) goNext(justCreated = task == null)
     }
 
     fun onEnterKey() {
-        if (task == null) return
-        if (tfv.text.isNotBlank()) goNext(justCreated = false)
+        if (current() == null) return
+        if (tfv.text.isNotBlank()) goNext(justCreated = task == null)
     }
 
     fun onBlur() {
-        val t = task ?: return
+        val t = current() ?: return
+        createdId = null
         val live = planner.find(t.id) ?: return
         if (live.title.isBlank()) {
             model.change { remove(live) }
@@ -339,10 +348,10 @@ fun TaskLine(
                         if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                         when {
                             e.key == Key.Enter || e.key == Key.NumPadEnter -> {
-                                if (task == null) true else { onEnterKey(); true }
+                                onEnterKey(); true
                             }
                             e.key == Key.Backspace && tfv.text.isEmpty() -> {
-                                if (task != null) model.change { remove(task) }
+                                current()?.let { ct -> model.change { remove(ct) } }
                                 if (prevKey != null) model.focusKey = prevKey
                                 true
                             }
@@ -352,7 +361,7 @@ fun TaskLine(
                 textStyle = titleStyle,
                 cursorBrush = SolidColor(p.accent),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(onNext = { if (task != null) onEnterKey() }),
+                keyboardActions = KeyboardActions(onNext = { onEnterKey() }),
                 decorationBox = { inner ->
                     Box {
                         if (tfv.text.isEmpty() && placeholder.isNotEmpty()) {

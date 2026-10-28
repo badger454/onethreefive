@@ -2,6 +2,9 @@
 
 Newest first. Each build publishes the top entry as its release notes, and the app shows it under "What's new" when you check for updates.
 
+## Oct 28, 2026 · Typing fix
+- Fast typing in an empty line no longer shows "…is full" and loses the text: the line keeps editing the task it just created.
+
 ## Oct 27, 2026 · Drop targets follow your finger
 - Bucket and Project light up when your finger is over them, not when the middle of the dragged row is.
 
