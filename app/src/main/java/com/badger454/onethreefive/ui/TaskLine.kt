@@ -123,6 +123,7 @@ fun TaskLine(
 ) {
     val p = LocalPal.current
     val planner = model.planner
+    @Suppress("UNUSED_VARIABLE") val redraw = model.version // redraw whenever data changes
     val focusManager = LocalFocusManager.current
     val fr = remember { FocusRequester() }
     var tfv by remember { mutableStateOf(TextFieldValue(task?.title ?: "")) }
@@ -418,6 +419,7 @@ fun IconBtn(icon: androidx.compose.ui.graphics.vector.ImageVector, description: 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MetaLine(model: AppModel, t: Task, ctx: RowCtx, ink: Color) {
+    @Suppress("UNUSED_VARIABLE") val redraw = model.version // redraw whenever data changes
     val p = LocalPal.current
     val planner = model.planner
     val c = planner.cat(t.cat)

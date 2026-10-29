@@ -62,6 +62,11 @@ android {
     }
 }
 
+// The app's data objects change in place, so screens must not skip redrawing based on "same object as last time".
+composeCompiler {
+    featureFlags = setOf(org.jetbrains.kotlin.compose.compiler.gradle.ComposeFeatureFlag.StrongSkipping.disabled())
+}
+
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)

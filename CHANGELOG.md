@@ -2,6 +2,10 @@
 
 Newest first. Each build publishes the top entry as its release notes, and the app shows it under "What's new" when you check for updates.
 
+## Oct 29, 2026 · Lists update instantly
+- New tasks appear on today's list right away (they were saved, but the list didn't redraw).
+- Edits and deletes show immediately instead of after switching screens.
+
 ## Oct 28, 2026 · Typing fix
 - Fast typing in an empty line no longer shows "…is full" and loses the text: the line keeps editing the task it just created.
 

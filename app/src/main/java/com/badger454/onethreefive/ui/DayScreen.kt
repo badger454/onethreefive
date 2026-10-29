@@ -207,6 +207,7 @@ private fun DayPage(model: AppModel, d: String, drag: DragState) {
  */
 @Composable
 private fun DayHeader(model: AppModel, shown: String) {
+    @Suppress("UNUSED_VARIABLE") val redraw = model.version // redraw whenever data changes
     val p = LocalPal.current
     val planner = model.planner
     val today = planner.today()
@@ -287,6 +288,7 @@ private fun DayHeader(model: AppModel, shown: String) {
 /** Mon–Sun for the shown week; swipe it sideways to see other weeks, tap a day to open it. */
 @Composable
 private fun WeekStrip(model: AppModel, shown: String) {
+    @Suppress("UNUSED_VARIABLE") val redraw = model.version // redraw whenever data changes
     val p = LocalPal.current
     val planner = model.planner
     val today = planner.today()
@@ -336,6 +338,7 @@ private fun WeekStrip(model: AppModel, shown: String) {
 
 @Composable
 private fun MonthGrid(model: AppModel, y: Int, m: Int, shown: String, onMonth: (Int) -> Unit, onPick: (String) -> Unit, modifier: Modifier) {
+    @Suppress("UNUSED_VARIABLE") val redraw = model.version // redraw whenever data changes
     val p = LocalPal.current
     val planner = model.planner
     val first = java.time.LocalDate.of(y, m, 1).toString()
@@ -425,6 +428,7 @@ private fun SectionHead(s: Section, trailing: @Composable androidx.compose.found
 
 @Composable
 private fun PlanDay(model: AppModel, d: String, drag: DragState) {
+    @Suppress("UNUSED_VARIABLE") val redraw = model.version // redraw whenever data changes
     val p = LocalPal.current
     val planner = model.planner
     if (planner.state.examples) {
@@ -499,6 +503,7 @@ private fun PlanDay(model: AppModel, d: String, drag: DragState) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun GhostRow(model: AppModel, k: Task, over: Int) {
+    @Suppress("UNUSED_VARIABLE") val redraw = model.version // redraw whenever data changes
     val p = LocalPal.current
     val planner = model.planner
     var menu by remember { mutableStateOf(false) }
@@ -544,6 +549,7 @@ private fun GhostRow(model: AppModel, k: Task, over: Int) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PastDay(model: AppModel, d: String) {
+    @Suppress("UNUSED_VARIABLE") val redraw = model.version // redraw whenever data changes
     val p = LocalPal.current
     val planner = model.planner
     Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
