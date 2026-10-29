@@ -99,6 +99,7 @@ fun SheetHost(model: AppModel) {
         is Sheet.Dest -> DestSheet(model, s, close)
         is Sheet.TodayPick -> TodayPickSheet(model, s.taskId, close)
         is Sheet.PickProject -> PickProjectSheet(model, s.taskId, close)
+        is Sheet.ShareAdd -> ShareAddSheet(model, s.text, close)
         is Sheet.Remind -> RemindSheet(model, s.taskId, close)
         is Sheet.Repeat -> RepeatSheet(model, s.taskId, close)
         is Sheet.Notes -> NotesSheet(model, s.taskId, close)
@@ -245,6 +246,69 @@ private fun TodayPickSheet(model: AppModel, id: String, close: () -> Unit) {
             }
         }
     }
+}
+
+/** Share → 1-3-5 from another app: first line becomes the task, the rest goes in its notes. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ShareAddSheet(model: AppModel, shared: String, close: () -> Unit) {
+    val p = LocalPal.current
+    val planner = model.planner
+    val lines = shared.lines().map { it.trim() }.filter { it.isNotEmpty() }
+    var title by remember { mutableStateOf((lines.firstOrNull() ?: "").take(500)) }
+    val notes = if (lines.size > 1) lines.drop(1).joinToString("\n") else null
+    val today = planner.today()
+    val tm = D.addDays(today, 1)
+    var dest by remember { mutableStateOf<String?>(null) } // null = Bucket
+    var picker by remember { mutableStateOf(false) }
+    fun add(date: String?, sec: Section?) {
+        val name = title.trim()
+        if (name.isEmpty()) return
+        close()
+        var made: com.badger454.onethreefive.domain.Task? = null
+        model.change(undoable = true) {
+            made = if (date == null) addTask(Planner.ListKind.BUCKET, name, null, null, null)
+            else addTask(Planner.ListKind.DAY, name, date, sec, null)
+            made?.notes = notes
+        }
+        if (made == null && sec != null) model.say("${sec.label} is full on that day.")
+        else model.say("Added to " + (if (date == null) "the bucket" else planner.relName(date) + " · " + (sec?.label ?: "")), undo = true)
+    }
+    AppSheet(close) {
+        SheetTitle("Add to 1-3-5")
+        Label("Task", Modifier.padding(top = 12.dp, bottom = 6.dp))
+        val shape = RoundedCornerShape(9.dp)
+        BasicTextField(
+            value = title,
+            onValueChange = { title = it.replace("\n", " ").take(500) },
+            modifier = Modifier.fillMaxWidth().clip(shape).background(p.bg).border(1.dp, p.line, shape).padding(12.dp),
+            textStyle = TextStyle(color = p.ink, fontSize = 16.sp),
+            cursorBrush = SolidColor(p.accent),
+        )
+        if (notes != null) Lead("Notes: " + trunc(notes.replace("\n", " · "), 160), Modifier.padding(top = 8.dp))
+        Label("Where", Modifier.padding(top = 14.dp, bottom = 6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            ChoiceChip("Bucket", dest == null) { dest = null }
+            ChoiceChip("Today", dest == today) { dest = today }
+            ChoiceChip("Tomorrow", dest == tm) { dest = tm }
+            ChoiceChip(if (dest != null && dest != today && dest != tm) D.fmtShort(dest!!) else "Pick a day…", dest != null && dest != today && dest != tm) { picker = true }
+        }
+        Spacer(Modifier.height(14.dp))
+        val d = dest
+        if (d == null) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Btn("Add to bucket", enabled = title.isNotBlank()) { add(null, null) }
+            }
+        } else {
+            Label("Section on " + D.fmtShort(d), Modifier.padding(bottom = 8.dp))
+            for (sec in Section.entries) {
+                val l = planner.dayList(d, sec)
+                val room = l.size < sec.max
+                SectionChoice(planner, d, sec, if (room) "${l.size}/${sec.max}" else "Full", room && title.isNotBlank()) { add(d, sec) }
+            }
+        }
+    }
+    if (picker) DatePickDialog(dest ?: tm, today, { picker = false }) { dest = it }
 }
 
 /** After dropping a task on "Project…": choose the project, or start a new one. */

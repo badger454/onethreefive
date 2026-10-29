@@ -77,13 +77,34 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_SEND) {
+            // Share → 1-3-5: offer to add the shared text as a task.
+            val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)?.trim().orEmpty()
+            val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.trim().orEmpty()
+            val combined = listOf(subject, text).filter { it.isNotEmpty() }.distinct().joinToString("\n")
+            if (combined.isNotEmpty()) model.sheet = Sheet.ShareAdd(combined)
+            return
+        }
         val date = intent?.getStringExtra(Reminders.EXTRA_DATE) ?: return
         model.openDay(date)
+    }
+
+    /** Nudges are on by default, so ask for notification permission once (Android 13+ requires it). */
+    private val notifPermission = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+
+    private fun askForNotificationsOnce() {
+        val prefs = getSharedPreferences("ui", MODE_PRIVATE)
+        if (prefs.getBoolean("askedNotifications", false)) return
+        if (!model.planner.state.nudges || Reminders.canPostNotifications(this)) return
+        prefs.edit().putBoolean("askedNotifications", true).apply()
+        notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
     }
 
     override fun onResume() {
         super.onResume()
         model.rollover()
+        com.badger454.onethreefive.notify.Nudges.schedule(this, model.planner)
+        askForNotificationsOnce()
         val f = IntentFilter().apply {
             addAction(Intent.ACTION_DATE_CHANGED)
             addAction(Intent.ACTION_TIME_CHANGED)

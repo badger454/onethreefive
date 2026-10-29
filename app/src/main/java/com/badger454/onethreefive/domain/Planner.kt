@@ -510,22 +510,43 @@ class Planner(var state: AppState, private val clock: Clock = SystemClock) {
         state = AppState.fromJson(json)
     }
 
+    /** A fresh state that keeps this phone's settings (theme, nudges, simulated date). */
+    private fun freshKeepingSettings(): AppState {
+        val o = state
+        return AppState(offset = o.offset, theme = o.theme, autoDark = o.autoDark, nudges = o.nudges, nudgeAm = o.nudgeAm, nudgePm = o.nudgePm)
+    }
+
     fun clearExamples() {
-        val off = state.offset
-        val theme = state.theme
-        val auto = state.autoDark
-        state = AppState(offset = off, theme = theme, autoDark = auto)
+        state = freshKeepingSettings()
         state.last = today()
+    }
+
+    // ---------- daily nudges ----------
+    /** Morning notification: (title, text). */
+    fun morningNudge(): Pair<String, String> {
+        val t = today()
+        val all = Section.entries.flatMap { dayList(t, it) }
+        val open = all.count { !it.done }
+        val big = dayList(t, Section.BIG).firstOrNull { !it.done }
+        val title = if (big != null) "Your Big Thing: " + big.title.ifBlank { "Untitled task" } else "Pick today's Big Thing"
+        val text = if (all.isEmpty()) "Nothing planned yet. Fill in today's 1-3-5." else "$open of ${all.size} tasks to do today."
+        return title to text
+    }
+
+    /** Evening notification, or null when everything planned today is done (or nothing was planned). */
+    fun eveningNudge(): Pair<String, String>? {
+        val t = today()
+        val all = Section.entries.flatMap { dayList(t, it) }
+        val open = all.count { !it.done }
+        if (all.isEmpty() || open == 0) return null
+        return "${all.size - open} of ${all.size} done today" to "$open left. Finish, carry, bucket or drop?"
     }
 
     fun eraseAll() = clearExamples()
 
     /** Sample data dated around today, so every feature can be tried. */
     fun seedExamples() {
-        val off = state.offset
-        val theme = state.theme
-        val auto = state.autoDark
-        state = AppState(offset = off, theme = theme, autoDark = auto)
+        state = freshKeepingSettings()
         val t = today()
         val y = D.addDays(t, -1)
         val tm = D.addDays(t, 1)

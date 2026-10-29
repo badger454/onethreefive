@@ -331,4 +331,32 @@ class PlannerTest {
         p.materialize(p.today())
         assertEquals(0, p.state.tasks.count { it.ruleId == "r1" && it.date == p.today() })
     }
+
+    @Test
+    fun nudgesDescribeTheDay() {
+        val (p, _) = planner()
+        assertEquals("Pick today's Big Thing", p.morningNudge().first)
+        assertNull(p.eveningNudge())
+        p.add("Ship it", p.today(), Section.BIG)
+        val s1 = p.add("a", p.today(), Section.SMALL)
+        assertEquals("Your Big Thing: Ship it", p.morningNudge().first)
+        assertEquals("2 of 2 tasks to do today.", p.morningNudge().second)
+        s1.done = true
+        assertEquals("1 of 2 done today", p.eveningNudge()!!.first)
+        p.dayList(p.today(), Section.BIG).single().done = true
+        assertNull(p.eveningNudge())
+    }
+
+    @Test
+    fun nudgeSettingsSurviveBackupAndClearing() {
+        val (p, _) = planner()
+        p.state.nudges = false
+        p.state.nudgeAm = "06:30"
+        val again = AppState.fromJson(p.state.toJson())
+        assertFalse(again.nudges)
+        assertEquals("06:30", again.nudgeAm)
+        assertEquals("20:00", AppState.fromJson("{\"tasks\":[]}").nudgePm)
+        p.seedExamples()
+        assertEquals("06:30", p.state.nudgeAm)
+    }
 }

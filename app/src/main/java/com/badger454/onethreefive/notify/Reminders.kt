@@ -152,5 +152,7 @@ class BootReceiver : BroadcastReceiver() {
         val model = App.model(context)
         model.rollover()
         Reminders.sync(context, model.planner)
+        Nudges.schedule(context, model.planner)
+        try { com.badger454.onethreefive.widget.DotsWidget.refresh(context) } catch (_: Exception) {}
     }
 }

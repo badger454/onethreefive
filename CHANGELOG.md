@@ -2,6 +2,11 @@
 
 Newest first. Each build publishes the top entry as its release notes, and the app shows it under "What's new" when you check for updates.
 
+## Oct 29, 2026 · Nudges, sharing and the dots widget
+- Daily nudges: a morning note with your Big Thing (7:00 AM) and an evening check-in (8:00 PM) when something is still unchecked. Change the times or turn them off in Settings → Daily nudges.
+- Share to 1-3-5: share text or a link from any app and add it to the bucket or a day. Extra lines go into the task's notes.
+- Home-screen widget "1-3-5 dots": looks like the app icon; each dot fills in when its task is checked off, and empty slots are dashed. Tap it to open today.
+
 ## Oct 29, 2026 · Lists update instantly
 - New tasks appear on today's list right away (they were saved, but the list didn't redraw).
 - Edits and deletes show immediately instead of after switching screens.

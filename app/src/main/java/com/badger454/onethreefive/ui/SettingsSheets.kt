@@ -327,6 +327,39 @@ fun SettingsSheet(model: AppModel, close: () -> Unit) {
             }
         }
 
+        Group("Daily nudges") {
+            var pick by remember { mutableStateOf<String?>(null) }
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { model.change { state.nudges = !state.nudges } }.padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Morning plan and evening check-in", fontWeight = FontWeight.Bold, color = p.ink)
+                    Text("Morning: your Big Thing. Evening: what's left, only if something is unchecked.", fontSize = 12.sp, color = p.muted)
+                }
+                androidx.compose.material3.Switch(checked = st.nudges, onCheckedChange = { on -> model.change { state.nudges = on } })
+            }
+            if (st.nudges) {
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Label("Morning", Modifier.padding(bottom = 6.dp))
+                        FieldButton(D.fmtTime(java.time.LocalTime.parse(st.nudgeAm).atDate(java.time.LocalDate.now())), Modifier.fillMaxWidth()) { pick = "am" }
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Label("Evening", Modifier.padding(bottom = 6.dp))
+                        FieldButton(D.fmtTime(java.time.LocalTime.parse(st.nudgePm).atDate(java.time.LocalDate.now())), Modifier.fillMaxWidth()) { pick = "pm" }
+                    }
+                }
+            }
+            pick?.let { which ->
+                val cur = java.time.LocalTime.parse(if (which == "am") st.nudgeAm else st.nudgePm)
+                TimePickDialog(cur, { pick = null }) { t ->
+                    val v = String.format("%02d:%02d", t.hour, t.minute)
+                    model.change { if (which == "am") { state.nudgeAm = v } else { state.nudgePm = v } }
+                }
+            }
+        }
+
         Group("Reminders") {
             val notif = Reminders.canPostNotifications(ctx)
             val exact = Reminders.canScheduleExact(ctx)

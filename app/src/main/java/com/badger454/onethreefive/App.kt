@@ -10,6 +10,7 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         Reminders.ensureChannel(this)
+        com.badger454.onethreefive.notify.Nudges.ensureChannel(this)
     }
 
     companion object {

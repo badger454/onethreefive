@@ -11,7 +11,9 @@ import com.badger454.onethreefive.domain.AppState
 import com.badger454.onethreefive.domain.Planner
 import com.badger454.onethreefive.domain.Section
 import com.badger454.onethreefive.domain.SystemClock
+import com.badger454.onethreefive.notify.Nudges
 import com.badger454.onethreefive.notify.Reminders
+import com.badger454.onethreefive.widget.DotsWidget
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import java.io.File
@@ -23,6 +25,7 @@ sealed class Sheet {
     data class Dest(val taskId: String, val copy: Boolean, val project: Boolean = false) : Sheet()
     data class TodayPick(val taskId: String) : Sheet()
     data class PickProject(val taskId: String) : Sheet()
+    data class ShareAdd(val text: String) : Sheet()
     data class Remind(val taskId: String) : Sheet()
     data class Repeat(val taskId: String) : Sheet()
     data class Notes(val taskId: String) : Sheet()
@@ -90,7 +93,14 @@ class AppModel(private val context: Context) {
     fun commit() {
         version++
         store.save(planner.state.toJson())
+        afterChange()
+    }
+
+    /** Keeps everything outside the app in step with the data: reminders, nudges, the home-screen widget. */
+    private fun afterChange() {
         Reminders.sync(context, planner)
+        Nudges.schedule(context, planner)
+        try { DotsWidget.refresh(context) } catch (_: Exception) {}
     }
 
     /** Text edits: save without redrawing every screen on each keystroke. */
@@ -102,7 +112,7 @@ class AppModel(private val context: Context) {
     fun commitNow() {
         version++
         store.saveNow(planner.state.toJson())
-        Reminders.sync(context, planner)
+        afterChange()
     }
 
     fun undo() {

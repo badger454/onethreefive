@@ -206,6 +206,10 @@ class AppState(
     var projects: MutableList<Project> = mutableListOf(),
     var theme: Theme = Theme.CLASSIC,
     var autoDark: Boolean = true,
+    /** Daily nudges: morning "your Big Thing" and evening "what's left" notifications (local times, HH:mm). */
+    var nudges: Boolean = true,
+    var nudgeAm: String = "07:00",
+    var nudgePm: String = "20:00",
 ) {
     fun toMap(): Map<String, Any?> = linkedMapOf(
         "v" to 1,
@@ -220,6 +224,9 @@ class AppState(
         "projects" to projects.map { it.toMap() },
         "theme" to theme.label,
         "autoDark" to autoDark,
+        "nudges" to nudges,
+        "nudgeAm" to nudgeAm,
+        "nudgePm" to nudgePm,
         "app" to "onethreefive-android",
     )
 
@@ -250,6 +257,9 @@ class AppState(
             s.projects = root.objs("projects").map { Project.from(it) }.toMutableList()
             s.theme = Theme.of(root.str("theme"))
             s.autoDark = root.bool("autoDark", true)
+            s.nudges = root.bool("nudges", true)
+            s.nudgeAm = root.str("nudgeAm")?.takeIf { Regex("^\\d{2}:\\d{2}$").matches(it) } ?: "07:00"
+            s.nudgePm = root.str("nudgePm")?.takeIf { Regex("^\\d{2}:\\d{2}$").matches(it) } ?: "20:00"
             // Keep ids unique even if a hand-edited backup repeats one.
             val seen = HashSet<String>()
             s.tasks = s.tasks.filter { seen.add(it.id) }.toMutableList()
