@@ -2,6 +2,11 @@
 
 Newest first. Each build publishes the top entry as its release notes, and the app shows it under "What's new" when you check for updates.
 
+## Nov 2, 2026 · Widget label, slimmer undo, weekly backups
+- The widget is now a black rounded tile with the blue dots circle and the label "1-3-5" underneath, sized for one app slot (1×1). If yours looks squashed, remove it and add it again.
+- The undo message after moving or deleting is a small floating pill and goes away after about 4 seconds instead of 10.
+- Weekly automatic backups: in Settings → Back up, choose a folder once. The app saves a backup there every 7 days and keeps the newest 8. "Back up now" saves one right away.
+
 ## Oct 29, 2026 · Nudges, sharing and the dots widget
 - Daily nudges: a morning note with your Big Thing (7:00 AM) and an evening check-in (8:00 PM) when something is still unchecked. Change the times or turn them off in Settings → Daily nudges.
 - Share to 1-3-5: share text or a link from any app and add it to the bucket or a day. Extra lines go into the task's notes.

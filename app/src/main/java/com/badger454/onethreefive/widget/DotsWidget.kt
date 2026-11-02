@@ -74,11 +74,13 @@ class DotsWidget : AppWidgetProvider() {
 
         private fun draw(context: Context, manager: AppWidgetManager, id: Int) {
             val opts = manager.getAppWidgetOptions(id)
-            val wDp = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110).takeIf { it > 0 } ?: 110
-            val hDp = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 110).takeIf { it > 0 } ?: 110
+            val wDp = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 72).takeIf { it > 0 } ?: 72
+            val hDp = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 80).takeIf { it > 0 } ?: 80
             val density = context.resources.displayMetrics.density
-            val sidePx = (minOf(wDp, hDp) * density).toInt().coerceIn(96, 720)
-            val bmp = render(App.model(context).planner, sidePx)
+            val scale = (720f / maxOf(wDp, hDp) / density).coerceAtMost(1f)
+            val wPx = (wDp * density * scale).toInt().coerceAtLeast(48)
+            val hPx = (hDp * density * scale).toInt().coerceAtLeast(48)
+            val bmp = render(App.model(context).planner, wPx, hPx, density * scale)
             val views = RemoteViews(context.packageName, R.layout.widget_dots)
             views.setImageViewBitmap(R.id.dots, bmp)
             views.setContentDescription(R.id.dots, describe(App.model(context).planner))
@@ -98,14 +100,41 @@ class DotsWidget : AppWidgetProvider() {
             return "1-3-5 today: ${all.count { it.done }} of ${all.size} done"
         }
 
-        /** Same geometry as the launcher icon (108-unit grid, visible circle of 72 units centred at 54). */
-        fun render(p: Planner, side: Int): Bitmap {
-            val bmp = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888)
+        /**
+         * A black rounded tile holding the app icon (blue circle with the 1-3-5 dots) and the label "1-3-5"
+         * underneath, like an app icon with its name. [dp] is pixels per dp for this bitmap.
+         */
+        fun render(p: Planner, w: Int, h: Int, dp: Float): Bitmap {
+            val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val c = Canvas(bmp)
-            val k = side / 72f
-            fun x(u: Float) = (u - 18f) * k
+            val tile = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF000000.toInt() }
+            val corner = minOf(w, h) * 0.2f
+            c.drawRoundRect(0f, 0f, w.toFloat(), h.toFloat(), corner, corner, tile)
+            // label size first, then the biggest circle that fits above it
+            val textSize = (minOf(w, h) * 0.16f).coerceIn(10f * dp, 16f * dp)
+            val pad = minOf(w, h) * 0.08f
+            val labelH = textSize * 1.35f
+            val diameter = minOf(w - 2 * pad, h - 2 * pad - labelH)
+            val cx = w / 2f
+            val cy = pad + diameter / 2f + ((h - 2 * pad - labelH) - diameter) / 2f
+            drawIcon(c, p, cx, cy, diameter)
+            val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = 0xFFFFFFFF.toInt()
+                this.textSize = textSize
+                textAlign = Paint.Align.CENTER
+                isFakeBoldText = true
+            }
+            c.drawText("1-3-5", cx, cy + diameter / 2f + labelH * 0.85f, text)
+            return bmp
+        }
+
+        /** The launcher icon's geometry: 108-unit grid, visible circle of 72 units centred at 54. */
+        private fun drawIcon(c: Canvas, p: Planner, cx0: Float, cy0: Float, diameter: Float) {
+            val k = diameter / 72f
+            fun x(u: Float) = cx0 + (u - 54f) * k
+            fun y(u: Float) = cy0 + (u - 54f) * k
             val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ICON_BLUE }
-            c.drawCircle(side / 2f, side / 2f, side / 2f, bg)
+            c.drawCircle(cx0, cy0, diameter / 2f, bg)
             val today = p.today()
             val rows = listOf(
                 Triple(Section.BIG, 40f, listOf(54f) to 7.5f),
@@ -129,18 +158,17 @@ class DotsWidget : AppWidgetProvider() {
                             val dashes = if (sec == Section.SMALL) 6 else 8
                             val seg = circ / (dashes * 2)
                             paint.pathEffect = DashPathEffect(floatArrayOf(seg, seg), 0f)
-                            c.drawCircle(x(cx), x(cy), radius - stroke / 2, paint)
+                            c.drawCircle(x(cx), y(cy), radius - stroke / 2, paint)
                         }
-                        t.done -> c.drawCircle(x(cx), x(cy), radius, paint)
+                        t.done -> c.drawCircle(x(cx), y(cy), radius, paint)
                         else -> {
                             paint.style = Paint.Style.STROKE
                             paint.strokeWidth = stroke
-                            c.drawCircle(x(cx), x(cy), radius - stroke / 2, paint)
+                            c.drawCircle(x(cx), y(cy), radius - stroke / 2, paint)
                         }
                     }
                 }
             }
-            return bmp
         }
     }
 }

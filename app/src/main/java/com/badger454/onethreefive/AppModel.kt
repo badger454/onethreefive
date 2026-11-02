@@ -115,6 +115,12 @@ class AppModel(private val context: Context) {
         afterChange()
     }
 
+    /** Weekly automatic backup, if a folder is set and one is due. Runs off the main thread. */
+    fun autoBackupIfDue() {
+        val json = planner.state.toJson()
+        Thread { com.badger454.onethreefive.data.AutoBackup.runIfDue(context) { json } }.start()
+    }
+
     fun undo() {
         val s = undoSnapshot ?: return
         undoSnapshot = null

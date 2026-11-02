@@ -11,6 +11,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -105,6 +110,7 @@ class MainActivity : ComponentActivity() {
         model.rollover()
         com.badger454.onethreefive.notify.Nudges.schedule(this, model.planner)
         askForNotificationsOnce()
+        model.autoBackupIfDue()
         val f = IntentFilter().apply {
             addAction(Intent.ACTION_DATE_CHANGED)
             addAction(Intent.ACTION_TIME_CHANGED)
@@ -139,7 +145,8 @@ fun Root(model: AppModel) {
         LaunchedEffect(Unit) {
             model.messages.collectLatest { m ->
                 snack.currentSnackbarData?.dismiss()
-                val r = snack.showSnackbar(m.text, actionLabel = if (m.undo) "Undo" else null, duration = if (m.undo) SnackbarDuration.Long else SnackbarDuration.Short)
+                // Short (about 4 s) for everything, including Undo.
+                val r = snack.showSnackbar(m.text, actionLabel = if (m.undo) "Undo" else null, duration = SnackbarDuration.Short)
                 if (r == SnackbarResult.ActionPerformed) model.undo()
             }
         }
@@ -156,9 +163,7 @@ fun Root(model: AppModel) {
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = { NavBar(model) },
             snackbarHost = {
-                SnackbarHost(snack) { data ->
-                    Snackbar(data, containerColor = pal.ink, contentColor = pal.bg, actionColor = pal.bg, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                }
+                SnackbarHost(snack) { data -> SlimSnackbar(data) }
             },
         ) { pad ->
             Box(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad).imePadding()) {
@@ -217,5 +222,33 @@ private fun NavBar(model: AppModel) {
             label = { Text("Settings") },
             colors = colors,
         )
+    }
+}
+
+/** Compact floating pill instead of a full-width bar: message plus an optional Undo. */
+@Composable
+private fun SlimSnackbar(data: androidx.compose.material3.SnackbarData) {
+    val p = LocalPal.current
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().padding(bottom = 8.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+        androidx.compose.foundation.layout.Row(
+            Modifier
+                .padding(horizontal = 24.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                .background(p.ink.copy(alpha = 0.9f))
+                .padding(start = 16.dp, end = if (data.visuals.actionLabel != null) 4.dp else 16.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
+            Text(
+                data.visuals.message, color = p.bg, fontSize = 13.sp, maxLines = 2,
+                modifier = Modifier.weight(1f, fill = false).padding(vertical = 4.dp),
+            )
+            data.visuals.actionLabel?.let { label ->
+                androidx.compose.material3.TextButton(
+                    onClick = { data.performAction() },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                    modifier = Modifier.height(32.dp),
+                ) { Text(label, color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+            }
+        }
     }
 }

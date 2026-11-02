@@ -409,6 +409,7 @@ fun SettingsSheet(model: AppModel, close: () -> Unit) {
                     model.say("Copied backup to the clipboard")
                 }
             }
+            AutoBackupRow(model)
         }
 
         Group("Restore") {
@@ -563,5 +564,48 @@ private fun UpdateSection(model: AppModel) {
                 }) { Text("Download") }
             },
         )
+    }
+}
+
+/** Weekly automatic backup: pick a folder once; the app writes a backup every 7 days and keeps the last 8. */
+@Composable
+private fun AutoBackupRow(model: AppModel) {
+    val p = LocalPal.current
+    val ctx = LocalContext.current
+    var tick by remember { mutableIntStateOf(0) }
+    @Suppress("UNUSED_VARIABLE") val t = tick
+    val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+        if (uri != null) {
+            com.badger454.onethreefive.data.AutoBackup.setFolder(ctx, uri)
+            val ok = com.badger454.onethreefive.data.AutoBackup.backUpNow(ctx, model.planner.state.toJson())
+            model.say(if (ok) "Weekly backups on. First backup saved." else "Couldn't write to that folder. Try another one.")
+            tick++
+        }
+    }
+    val folder = com.badger454.onethreefive.data.AutoBackup.folder(ctx)
+    Text("Automatic weekly backup", fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.padding(top = 16.dp))
+    if (folder == null) {
+        Text(
+            "Pick a folder once, and the app saves a backup there every week, keeping the last ${com.badger454.onethreefive.data.AutoBackup.KEEP}.",
+            fontSize = 14.sp, color = p.muted, modifier = Modifier.padding(top = 2.dp, bottom = 8.dp),
+        )
+        Btn("Choose backup folder", BtnKind.GHOST) { pickFolder.launch(null) }
+    } else {
+        val name = com.badger454.onethreefive.data.AutoBackup.folderName(ctx) ?: "your folder"
+        val last = com.badger454.onethreefive.data.AutoBackup.lastDate(ctx)?.let { D.fmtDate(it) } ?: "not yet"
+        Text("Weekly to “$name” · last backup: $last", fontSize = 14.sp, color = p.muted, modifier = Modifier.padding(top = 2.dp, bottom = 8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Btn("Back up now", BtnKind.GHOST, Modifier.weight(1f)) {
+                val ok = com.badger454.onethreefive.data.AutoBackup.backUpNow(ctx, model.planner.state.toJson())
+                model.say(if (ok) "Backup saved" else "Couldn't write to the backup folder. Choose it again.")
+                tick++
+            }
+            Btn("Change folder", BtnKind.GHOST, Modifier.weight(1f)) { pickFolder.launch(null) }
+            Btn("Turn off", BtnKind.DANGER_GHOST, Modifier.weight(1f)) {
+                com.badger454.onethreefive.data.AutoBackup.turnOff(ctx)
+                model.say("Weekly backups off. Existing backup files are kept.")
+                tick++
+            }
+        }
     }
 }

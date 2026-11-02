@@ -78,6 +78,7 @@ object Nudges {
     fun fire(ctx: Context, kind: String) {
         val model = App.model(ctx)
         model.rollover()
+        model.autoBackupIfDue()
         val p = model.planner
         val msg = if (kind == AM) p.morningNudge() else p.eveningNudge()
         if (msg != null && p.state.nudges && Reminders.canPostNotifications(ctx)) {
